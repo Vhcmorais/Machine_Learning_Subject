@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trabalho 07 — Aproximação Funcional (MLP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#0d0717;
+    --bg-1:#1a0f2e;
+    --bg-2:#24163d;
+    --panel:#1e1330cc;
+    --border:#3a2a5c;
+    --text:#e9e3f5;
+    --text-dim:#a597c2;
+    --accent-pink:#ff6fa5;
+    --accent-purple:#9b5de5;
+    --accent-red:#e8385d;
+    --mono:'Space Mono', monospace;
+    --sans:'DM Sans', sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, #3a1f5d44, transparent 40%),
+      radial-gradient(circle at 85% 80%, #5d1f4a33, transparent 45%),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1) 40%, var(--bg-2));
+    color:var(--text);
+    font-family:var(--sans);
+    padding:48px 24px 80px;
+  }
+
+  .wrap{
+    max-width:980px;
+    margin:0 auto;
+  }
+
+  header{
+    margin-bottom:40px;
+  }
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    color:var(--accent-pink);
+    margin:0 0 10px;
+  }
+
+  h1{
+    font-family:var(--mono);
+    font-size:clamp(26px, 4vw, 38px);
+    font-weight:700;
+    margin:0 0 12px;
+    line-height:1.15;
+    background:linear-gradient(90deg, #fff, var(--accent-pink) 60%, var(--accent-purple));
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+
+  .subtitle{
+    color:var(--text-dim);
+    font-size:15px;
+    max-width:620px;
+    line-height:1.5;
+  }
+
+  .arch{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text-dim);
+    margin-top:16px;
+    padding:10px 14px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    display:inline-block;
+    background:#15092655;
+  }
+  .arch span{color:var(--accent-pink);}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:28px;
+    margin-bottom:28px;
+    backdrop-filter:blur(6px);
+  }
+
+  .panel h2{
+    font-family:var(--mono);
+    font-size:14px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--accent-purple);
+    margin:0 0 20px;
+  }
+
+  .controls{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:18px;
+  }
+
+  @media (max-width:720px){
+    .controls{grid-template-columns:repeat(2, 1fr);}
+  }
+
+  .field label{
+    display:block;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+
+  .field input{
+    width:100%;
+    background:#0d0719;
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:14px;
+    padding:10px 12px;
+    border-radius:8px;
+    outline:none;
+    transition:border-color .15s;
+  }
+  .field input:focus{border-color:var(--accent-pink);}
+
+  .train-btn{
+    margin-top:24px;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
+    color:#fff;
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:transform .15s, box-shadow .15s;
+  }
+  .train-btn:hover{transform:translateY(-1px); box-shadow:0 8px 24px #9b5de555;}
+  .train-btn:disabled{opacity:.55; cursor:wait; transform:none; box-shadow:none;}
+
+  .status{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text-dim);
+    margin-top:14px;
+    min-height:18px;
+  }
+  .status.active{color:var(--accent-pink);}
+  .status.error{color:var(--accent-red);}
+
+  .results{display:none;}
+  .results.show{display:block;}
+
+  .metric-row{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    margin-bottom:24px;
+  }
+
+  .metric{
+    flex:1;
+    min-width:160px;
+    background:#0d0719;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:16px 18px;
+  }
+  .metric .label{
+    font-size:11px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin-bottom:6px;
+  }
+  .metric .value{
+    font-family:var(--mono);
+    font-size:22px;
+    color:var(--accent-pink);
+  }
+
+  .charts{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:18px;
+  }
+  .charts .full{grid-column:1 / -1;}
+
+  @media (max-width:720px){
+    .charts{grid-template-columns:1fr;}
+  }
+
+  .chart-card{
+    background:#fff;
+    border-radius:10px;
+    padding:8px;
+    overflow:hidden;
+  }
+  .chart-card img{
+    width:100%;
+    display:block;
+    border-radius:4px;
+  }
+
+  footer{
+    margin-top:36px;
+    font-size:12px;
+    color:var(--text-dim);
+    line-height:1.6;
+  }
+  footer code{
+    font-family:var(--mono);
+    background:#0d0719;
+    padding:2px 6px;
+    border-radius:4px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Trabalho 07</p>
+    <h1>Aproximação Funcional</h1>
+    <p class="subtitle">
+      Rede neural multicamada (MLP) treinada do zero com NumPy — forward pass,
+      backpropagation e gradiente descendente com momento, sem bibliotecas de
+      machine learning.
+    </p>
+    <div class="arch">1 entrada → <span>H</span> ocultos (tanh) → 1 saída (linear)</div>
+  </header>
+
+  <section class="panel">
+    <h2>Hiperparâmetros</h2>
+    <div class="controls">
+      <div class="field">
+        <label for="hidden">Neurônios ocultos</label>
+        <input type="number" id="hidden" value="10" min="1" max="200">
+      </div>
+      <div class="field">
+        <label for="lr">Taxa de aprendizado</label>
+        <input type="number" id="lr" value="0.05" step="0.01" min="0.0001">
+      </div>
+      <div class="field">
+        <label for="epochs">Épocas</label>
+        <input type="number" id="epochs" value="3000" min="10" max="50000">
+      </div>
+      <div class="field">
+        <label for="momentum">Momento</label>
+        <input type="number" id="momentum" value="0.5" step="0.05" min="0" max="0.99">
+      </div>
+    </div>
+    <button class="train-btn" id="trainBtn">Treinar rede</button>
+    <p class="status" id="status"></p>
+  </section>
+
+  <section class="results panel" id="results">
+    <h2>Resultados</h2>
+    <div class="metric-row">
+      <div class="metric">
+        <div class="label">MSE final</div>
+        <div class="value" id="mseValue">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Neurônios ocultos</div>
+        <div class="value" id="hiddenValue">—</div>
+      </div>
+      <div class="metric">
+        <div class="label">Épocas treinadas</div>
+        <div class="value" id="epochsValue">—</div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-card"><img id="imgSamples" alt="Pontos amostrados"></div>
+      <div class="chart-card"><img id="imgFit" alt="Aproximação da MLP"></div>
+      <div class="chart-card full"><img id="imgMse" alt="Convergência do MSE"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const API_URL = window.location.origin.includes("8765")
+  ? "/api/train"
+  : "http://localhost:8765/api/train";
+
+const trainBtn = document.getElementById("trainBtn");
+const statusEl = document.getElementById("status");
+const resultsEl = document.getElementById("results");
+
+trainBtn.addEventListener("click", async () => {
+  const payload = {
+    hidden_neurons: parseInt(document.getElementById("hidden").value, 10),
+    learning_rate: parseFloat(document.getElementById("lr").value),
+    epochs: parseInt(document.getElementById("epochs").value, 10),
+    momentum: parseFloat(document.getElementById("momentum").value),
+  };
+
+  trainBtn.disabled = true;
+  statusEl.textContent = "Treinando a rede...";
+  statusEl.className = "status active";
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error || `Erro HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    document.getElementById("mseValue").textContent = data.final_mse.toExponential(3);
+    document.getElementById("hiddenValue").textContent = data.hidden_neurons;
+    document.getElementById("epochsValue").textContent = data.epochs;
+
+    document.getElementById("imgSamples").src = "data:image/png;base64," + data.img_samples;
+    document.getElementById("imgFit").src = "data:image/png;base64," + data.img_fit;
+    document.getElementById("imgMse").src = "data:image/png;base64," + data.img_mse;
+
+    resultsEl.classList.add("show");
+    statusEl.textContent = "Treinamento concluído.";
+    statusEl.className = "status";
+  } catch (err) {
+    statusEl.textContent = "Falha ao treinar: " + err.message + " (o servidor está rodando?)";
+    statusEl.className = "status error";
+  } finally {
+    trainBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
